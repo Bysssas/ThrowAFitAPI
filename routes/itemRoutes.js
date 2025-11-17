@@ -1,33 +1,23 @@
-import Item from "../models/Item.js";
+import express from "express";
+import { getItems, createItem } from "../controllers/itemController.js";
 
-// GET all items or by category
-export const getItems = async (req, res, category) => {
-  try {
-    let items;
-    if (category) {
-      items = await Item.find({ category }); // filter by category
-    } else {
-      items = await Item.find(); // get all items
-    }
-    res.status(200).json(items);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+const router = express.Router();
+
+// GET all items
+router.get("/", getItems);
 
 // POST a new item
-export const createItem = async (req, res) => {
-  try {
-    const { name, price, category, imageUrl } = req.body;
+router.post("/", createItem);
 
-    if (!name || !price || !category) {
-      return res.status(400).json({ message: "Name, price, and category are required" });
-    }
+// GET items by category
+router.get("/accessories", (req, res) => getItemsByCategory(req, res, "accessories"));
+router.get("/tops", (req, res) => getItemsByCategory(req, res, "tops"));
+router.get("/bottoms", (req, res) => getItemsByCategory(req, res, "bottoms"));
+router.get("/shoes", (req, res) => getItemsByCategory(req, res, "shoes"));
 
-    const newItem = await Item.create({ name, price, category, imageUrl });
+// Helper function for category filtering
+function getItemsByCategory(req, res, category) {
+  getItems(req, res, category);
+}
 
-    res.status(201).json(newItem);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+export default router;
