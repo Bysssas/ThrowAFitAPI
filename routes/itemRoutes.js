@@ -1,31 +1,33 @@
-import express from "express";
-import { getItems, createItem } from "../controllers/itemController.js";
+import Item from "../models/Item.js";
 
-const router = express.Router();
+// GET all items or by category
+export const getItems = async (req, res, category) => {
+  try {
+    let items;
+    if (category) {
+      items = await Item.find({ category }); // filter by category
+    } else {
+      items = await Item.find(); // get all items
+    }
+    res.status(200).json(items);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-router.get("/", getItems);
-router.post("/", createItem);
+// POST a new item
+export const createItem = async (req, res) => {
+  try {
+    const { name, price, category, imageUrl } = req.body;
 
-// Base route
-router.get("/", (req, res) => {
-  res.send("This is the Throw-A-Fit Classifier API");
-});
+    if (!name || !price || !category) {
+      return res.status(400).json({ message: "Name, price, and category are required" });
+    }
 
-// Category routes
-router.get("/accessories", (req, res) => {
-  res.send("This is the Accessories category");
-});
+    const newItem = await Item.create({ name, price, category, imageUrl });
 
-router.get("/tops", (req, res) => {
-  res.send("This is the Tops category");
-});
-
-router.get("/bottoms", (req, res) => {
-  res.send("This is the Bottoms category");
-});
-
-router.get("/shoes", (req, res) => {
-  res.send("This is the Shoes category");
-});
-
-export default router;
+    res.status(201).json(newItem);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
