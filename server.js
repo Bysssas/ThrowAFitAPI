@@ -8,8 +8,9 @@ import { v2 as cloudinary } from "cloudinary";
 
 // 1. Load environment variables first
 dotenv.config();
+console.log("MONGO_URI:", process.env.MONGO_URI);
 
-// 2. Configure Cloudinary
+// 2. Configure Cloudinary using loaded environment variables
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -20,18 +21,11 @@ connectDB();
 
 const app = express();
 
-// --- CRITICAL FIX BELOW ---
-// The origin causing the CORS block is your Netlify frontend.
-const allowedOrigin = 'https://serene-eclair-9ae22f.netlify.app';
-const corsOptions = {
-    // Explicitly set the origin that is allowed to make requests
-    origin: allowedOrigin,
-};
+// Middleware
 
-// Apply the specific CORS options to allow your Netlify frontend
-app.use(cors(corsOptions)); 
-
-// --- END CRITICAL FIX ---
+// ✅ CORS FIX: Using simple app.use(cors()) which applies
+// Access-Control-Allow-Origin: * to resolve the issue with Netlify.
+app.use(cors()); 
 
 app.use(express.json());
 
