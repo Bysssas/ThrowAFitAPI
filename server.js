@@ -24,7 +24,7 @@ const app = express();
 // --- START MANUAL CORS CONFIGURATION ---
 
 // Define your frontend origin
-const allowedOrigin = 'https://serene-eclair-9ae22f.netlify.app';
+const allowedOrigin = 'https://serene-eclair-9ae22f.netlify.app/upload';
 
 app.use((req, res, next) => {
     // 1. Set the specific origin header
