@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import uploadRoute from "./routes/uploadRoutes.js";
+import uploadRoute from ".uploadRoutes.js";
 
 dotenv.config();
 
