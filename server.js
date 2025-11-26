@@ -1,51 +1,51 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import connectDB from "./config/db.js"; // Assuming you still need your DB connection
-import itemRoutes from "./routes/itemRoutes.js"; // Assuming you still use this route
-import uploadRoute from "./routes/uploadRoutes.js"; // Correct path to your upload routes
-import { v2 as cloudinary } from "cloudinary"; // Cloudinary import (already configured globally)
+import connectDB from "./config/db.js";
+import itemRoutes from "./routes/itemRoutes.js";   // ✔ must export default
+import uploadRoutes from "./routes/uploadRoutes.js"; // ✔ name fixed
+import { v2 as cloudinary } from "cloudinary";
 
-// Load environment variables
 dotenv.config();
 
-// Configure Cloudinary globally
+// --- Cloudinary Global Config ---
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Initialize database connection (if applicable)
+// --- Database ---
 connectDB();
 
 const app = express();
 
-// --- 🌐 CORS Configuration ---
-// This is the correct and robust way to handle CORS.
-const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000'; 
+// --- CORS ---
+const allowedOrigin = process.env.CORS_ORIGIN || "http://localhost:3000";
 console.log("Allowed CORS origin:", allowedOrigin);
 
-app.use(cors({
-  origin: allowedOrigin,   
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Include OPTIONS for preflight requests
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
+app.use(
+  cors({
+    origin: allowedOrigin,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
-// --- Middleware ---
-app.use(express.json()); // Body parser for JSON payloads
+app.use(express.json());
 
 // --- Routes ---
-app.use("/api/items", itemRoutes); 
-app.use("/api/upload", uploadRoute);
+app.use("/api/items", itemRoutes);
+app.use("/api/upload", uploadRoutes);
 
-// Test route
+// --- Root Test Route ---
 app.get("/", (req, res) => {
-  res.send("Throw-A-Fit API is running.");
+  res.send("Throw-A-Fit API is running.");
 });
 
+// --- PORT ---
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
