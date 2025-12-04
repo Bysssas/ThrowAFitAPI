@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
+import verifyToken from "../middleware/verifyToken.js";
 
 const router = express.Router();
 
@@ -42,25 +43,35 @@ router.post("/login", async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ msg: "Incorrect password" });
 
-    // Generate fresh JWT token every login
     const token = jwt.sign(
       { id: user._id, username: user.username },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    // Optional: return user info so frontend can track it
     res.json({
       msg: "Login success",
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
       },
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Server error" });
+  }
+});
+
+// -------- GET CURRENT USER --------
+router.get("/me", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password"); // exclude password
+    if (!user) return res.status(404).json({ msg: "User not found" });
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Server error fetching user info" });
   }
 });
 
