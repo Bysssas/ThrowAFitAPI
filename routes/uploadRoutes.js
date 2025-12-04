@@ -6,7 +6,10 @@ import Item from "../models/Item.js";
 import FormData from "form-data";
 import axios from "axios";
 import { v2 as cloudinary } from "cloudinary";
-import { upload } from "../server.js"; // multer middleware
+import multer from "multer";
+
+// ─── MULTER SETUP ───
+const upload = multer({ dest: "./uploads/" });
 
 const router = express.Router();
 
@@ -19,12 +22,11 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
     const { name, category } = req.body;
 
     if (!name || !category) {
-      // Delete temp file if input invalid
       fs.unlinkSync(req.file.path);
       return res.status(400).json({ message: "Name and category are required" });
     }
 
-    // --- Step 1: Send to remove.bg API ---
+    // --- Step 1: remove.bg API ---
     const formData = new FormData();
     formData.append("image_file", fs.createReadStream(req.file.path));
     formData.append("size", "auto");
@@ -40,7 +42,7 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
       responseType: "arraybuffer",
     });
 
-    // --- Step 2: Save bg-removed image temporarily ---
+    // --- Step 2: Save temporarily ---
     const tempPath = path.join(".", `uploads/temp-${Date.now()}.png`);
     fs.writeFileSync(tempPath, removeBgRes.data);
 
@@ -50,11 +52,11 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
       resource_type: "image",
     });
 
-    // --- Step 4: Cleanup temp files ---
+    // --- Step 4: Cleanup ---
     fs.unlinkSync(req.file.path);
     fs.unlinkSync(tempPath);
 
-    // --- Step 5: Save item to DB ---
+    // --- Step 5: Save to DB ---
     const newItem = new Item({
       name,
       category,
@@ -67,7 +69,6 @@ router.post("/", auth, upload.single("image"), async (req, res) => {
     res.status(201).json({ message: "Upload successful", item: newItem });
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
-    // Attempt to clean up temp files if they exist
     if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     res.status(500).json({ message: err.message || "Server error during upload" });
   }
