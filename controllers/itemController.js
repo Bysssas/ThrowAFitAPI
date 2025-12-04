@@ -1,5 +1,6 @@
 import Item from "../models/Item.js";
 
+// Get items (optionally by category) for the logged-in user
 export const getItems = async (req, res, category) => {
   try {
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
@@ -17,12 +18,14 @@ export const getItems = async (req, res, category) => {
 // Create a new item for the logged-in user
 export const createItem = async (req, res) => {
   try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
     const { name, category, imageUrl } = req.body;
     const newItem = new Item({
       name,
       category,
       imageUrl,
-      user: req.user._id, // 🔹 associate item with logged-in user
+      user: req.user._id, // 🔹 associate with logged-in user
     });
 
     await newItem.save();
