@@ -1,77 +1,83 @@
 import express from "express";
-import { auth } from "./authRoutes.js";
-import { v2 as cloudinary } from "cloudinary";
-import fs from "fs";
-import path from "path";
-import Item from "../models/Item.js";
-import FormData from "form-data";
-import axios from "axios";
+import multer from "multer";
+import { v2 as cloudinary } from "cloudinary"; 
+import axios from "axios"; 
+import Item from '../models/Item.js'; 
+import verifyToken from "../middleware/verifyToken.js";
 
 const router = express.Router();
 
-// POST /api/upload
-router.post("/", auth, async (req, res) => {
-  try {
-    if (!req.files || !req.files.image) {
-      return res.status(400).json({ message: "No file uploaded" });
+const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }
+}); 
+
+router.post("/", verifyToken, upload.single("image"), async (req, res) => {
+    // 🔹 TEMP DEBUG: log req.user to verify JWT decoding
+    console.log("DEBUG: req.user:", req.user);
+
+    if (!req.file || !req.file.buffer) {
+        return res.status(400).json({ message: "❌ No file received or buffer missing." });
     }
 
-    const { image } = req.files;
-    const { name, category } = req.body;
+    const fileBuffer = req.file.buffer;
+    const { name, category } = req.body; 
 
     if (!name || !category) {
-      fs.unlinkSync(image.tempFilePath);
-      return res.status(400).json({ message: "Name and category are required" });
+        return res.status(400).json({ message: "❌ Missing item name or category." });
     }
 
-    // ─── Step 1: Remove Background using remove.bg API ───
-    const formData = new FormData();
-    formData.append("image_file", fs.createReadStream(image.tempFilePath));
-    formData.append("size", "auto");
+    try {
+        // Remove background via remove.bg
+        const removeBgApiResult = await axios({
+            method: 'post',
+            url: 'https://api.remove.bg/v1.0/removebg',
+            headers: { 'X-Api-Key': process.env.REMOVE_BG_API_KEY },
+            data: {
+                image_file_b64: fileBuffer.toString('base64'), 
+                size: 'auto',
+                type: 'product',
+            },
+            responseType: 'arraybuffer'
+        });
 
-    const removeBgRes = await axios({
-      method: "post",
-      url: "https://api.remove.bg/v1.0/removebg",
-      data: formData,
-      headers: {
-        ...formData.getHeaders(),
-        "X-Api-Key": process.env.REMOVEBG_API_KEY, // set in .env
-      },
-      responseType: "arraybuffer",
-    });
+        const processedImageBase64 = Buffer.from(removeBgApiResult.data).toString('base64');
+        const dataUri = `data:image/png;base64,${processedImageBase64}`;
 
-    // ─── Step 2: Save temp background-removed image ───
-    const tempPath = path.join(".", `uploads/temp-${Date.now()}.png`);
-    fs.writeFileSync(tempPath, removeBgRes.data);
+        // Upload to Cloudinary
+        const cloudinaryResult = await cloudinary.uploader.upload(dataUri, {
+            folder: "ThrowAFit",
+            format: 'png',
+        });
 
-    // ─── Step 3: Upload to Cloudinary ───
-    const uploadResult = await cloudinary.uploader.upload(tempPath, {
-      folder: "throw-a-fit",
-      resource_type: "image",
-    });
+        const imageUrl = cloudinaryResult.secure_url;
 
-    // ─── Step 4: Cleanup temp files ───
-    fs.unlinkSync(image.tempFilePath);
-    fs.unlinkSync(tempPath);
+        // 🔥 Save item with user ID from JWT
+        const newItem = await Item.create({
+            name,
+            category,
+            imageUrl,
+            user: req.user.id 
+        });
 
-    // ─── Step 5: Save item to DB ───
-    const newItem = new Item({
-      name,
-      category,
-      imageUrl: uploadResult.secure_url,
-      user: req.user._id,
-    });
+        res.status(201).json({
+            message: "✅ Item created and image processed successfully!",
+            item: newItem,
+        });
 
-    await newItem.save();
+    } catch (error) {
+        console.error("Upload/Database Error:", error.message);
+        
+        if (error.response && error.response.data) {
+            const apiError = Buffer.from(error.response.data).toString('utf8');
+            console.error("remove.bg Error:", apiError);
+            return res.status(error.response.status || 500).json({ 
+                message: `❌ API Error: ${apiError.slice(0, 100)}...` 
+            });
+        }
 
-    res.status(201).json({ message: "Upload successful", item: newItem });
-  } catch (err) {
-    console.error("UPLOAD ERROR:", err);
-    // Remove temp files if they exist
-    if (req.files?.image?.tempFilePath && fs.existsSync(req.files.image.tempFilePath))
-      fs.unlinkSync(req.files.image.tempFilePath);
-    res.status(500).json({ message: err.message || "Server error during upload" });
-  }
+        return res.status(500).json({ message: "❌ Failed to process, upload, or save item." });
+    }
 });
 
 export default router;

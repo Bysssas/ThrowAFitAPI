@@ -6,7 +6,6 @@ import itemRoutes from "./routes/itemRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import { v2 as cloudinary } from "cloudinary";
-import fileUpload from "express-fileupload";
 
 dotenv.config();
 
@@ -17,12 +16,12 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// --- Connect to Database ---
+// --- Database ---
 connectDB();
 
 const app = express();
 
-// --- CORS Setup ---
+// --- CORS ---
 const productionOrigin = process.env.CORS_ORIGIN;
 const localOrigin = "http://localhost:3000";
 const allowedOrigins = [productionOrigin, localOrigin].filter(Boolean);
@@ -45,14 +44,8 @@ app.use(
   })
 );
 
-// --- Middleware ---
+// --- Body parser ---
 app.use(express.json());
-app.use(
-  fileUpload({
-    useTempFiles: true,
-    tempFileDir: "/tmp/",
-  })
-);
 
 // --- Routes ---
 app.use("/api/items", itemRoutes);
@@ -64,13 +57,13 @@ app.get("/", (req, res) => {
   res.send("Throw-A-Fit API is running.");
 });
 
-// --- Global Error Handling ---
+// --- Error Handling Middleware ---
 app.use((err, req, res, next) => {
-  console.error("SERVER ERROR:", err.stack || err);
-  res.status(500).json({ message: err.message || "Server error" });
+  console.error(err.stack);
+  res.status(500).json({ message: err.message });
 });
 
-// --- Start Server ---
+// --- PORT ---
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
