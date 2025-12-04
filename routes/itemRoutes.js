@@ -1,21 +1,28 @@
 import express from "express";
 import { getItems } from "../controllers/itemController.js";
-import verifyToken from "../middleware/verifyToken.js"; // JWT middleware
+import verifyToken from "../middleware/verifyToken.js";
 
 const router = express.Router();
 
-// Helper function for category filtering
-function getItemsByCategory(req, res, category) {
-    getItems(req, res, category);
-}
+// ────────── Get all items for the logged-in user ──────────
+router.get("/user", verifyToken, async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+    // getItems uses req.user internally
+    await getItems(req, res);
+  } catch (err) {
+    console.error("Error fetching user items:", err);
+    res.status(500).json({ message: "Server error fetching user items" });
+  }
+});
 
-// Secure all GET requests with verifyToken
-router.get("/", verifyToken, getItems);
+// ────────── Category-specific routes ──────────
+router.get("/tops", verifyToken, async (req, res) => getItems(req, res, "tops"));
+router.get("/bottoms", verifyToken, async (req, res) => getItems(req, res, "bottoms"));
+router.get("/shoes", verifyToken, async (req, res) => getItems(req, res, "shoes"));
+router.get("/accessories", verifyToken, async (req, res) => getItems(req, res, "accessories"));
 
-// Category-specific routes
-router.get("/accessories", verifyToken, (req, res) => getItemsByCategory(req, res, "accessories"));
-router.get("/tops", verifyToken, (req, res) => getItemsByCategory(req, res, "tops"));
-router.get("/bottoms", verifyToken, (req, res) => getItemsByCategory(req, res, "bottoms"));
-router.get("/shoes", verifyToken, (req, res) => getItemsByCategory(req, res, "shoes"));
+// ────────── Default route: all items ──────────
+router.get("/", verifyToken, async (req, res) => getItems(req, res));
 
 export default router;
