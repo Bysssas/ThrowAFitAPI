@@ -12,7 +12,8 @@ export const getItems = async (req, res, category) => {
     const items = await Item.find(filter).sort({ createdAt: -1 });
     res.json(items);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Get items error:", err);
+    res.status(500).json({ message: "Server error fetching items" });
   }
 };
 
@@ -26,31 +27,35 @@ export const createItem = async (req, res) => {
       name,
       category,
       imageUrl,
-      user: new mongoose.Types.ObjectId(req.user.id), // associate with logged-in user
+      user: new mongoose.Types.ObjectId(req.user.id),
     });
 
     await newItem.save();
     res.status(201).json(newItem);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error("Create item error:", err);
+    res.status(400).json({ message: "Failed to create item" });
   }
 };
 
-// ────────── Delete an item ──────────
+// ────────── DELETE ITEM ──────────
 export const deleteItem = async (req, res) => {
+  const { id: itemId } = req.params;
+
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(itemId)) {
+    return res.status(400).json({ message: "Invalid item ID" });
+  }
+
   try {
-    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
-
-    const itemId = req.params.id;
-
-    // Make sure the item belongs to the logged-in user
+    // Ensure item belongs to the logged-in user
     const item = await Item.findOne({ _id: itemId, user: req.user.id });
     if (!item) return res.status(404).json({ message: "Item not found" });
 
     await item.remove();
     res.status(200).json({ message: "Item deleted successfully" });
   } catch (err) {
-    console.error("Error deleting item:", err);
+    console.error("Delete item error:", err);
     res.status(500).json({ message: "Server error deleting item" });
   }
 };

@@ -24,10 +24,8 @@ router.get("/accessories", verifyToken, async (req, res) => getItems(req, res, "
 // ────────── Default route: all items ──────────
 router.get("/", verifyToken, async (req, res) => getItems(req, res));
 
-/* ────────── DELETE ITEM ──────────
-   DELETE /api/items/:id
-   Deletes an item by ID for the logged-in user
-*/
+// ────────── DELETE ITEM ──────────
+// DELETE /api/items/:id
 router.delete("/:id", verifyToken, async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
