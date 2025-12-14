@@ -19,7 +19,7 @@ cloudinary.config({
 });
 
 // --- Database Connection ---
-connectDB();
+// connectDB(); // Temporarily commented out to test server startup
 
 const app = express();
 
