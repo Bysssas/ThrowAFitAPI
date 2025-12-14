@@ -2,27 +2,14 @@ import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { randomBytes } from "crypto";
-import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail";
 import User from "../models/userModel.js";
 import verifyToken from "../middleware/verifyToken.js";
 
 const router = express.Router();
 
-/* =======================
-   EMAIL TRANSPORTER (FIXED)
-======================= */
-const transporter = nodemailer.createTransport({
-  host: 'smtp.sendgrid.net',
-  port: 587,
-  secure: false, // TLS
-  auth: {
-    user: 'apikey',
-    pass: process.env.SENDGRID_API_KEY,
-  },
-  tls: {
-    rejectUnauthorized: false, // 👈 FIX for self-signed cert error
-  },
-});
+// Set SendGrid API key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 /* =======================
    SIGNUP
@@ -178,9 +165,9 @@ router.post("/forgot-password", async (req, res) => {
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}&id=${user._id}`;
 
     try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
+      const msg = {
         to: user.email,
+        from: process.env.EMAIL_USER, // Must be verified in SendGrid
         subject: "Password Reset Request",
         html: `
           <p>You requested a password reset.</p>
@@ -190,7 +177,8 @@ router.post("/forgot-password", async (req, res) => {
             <small>This link expires in 1 hour.</small>
           </p>
         `,
-      });
+      };
+      await sgMail.send(msg);
     } catch (emailErr) {
       console.error("Email sending failed");
       console.error("Reset link:", resetLink);
