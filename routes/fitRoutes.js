@@ -4,6 +4,6 @@ import { generateFit } from "../controllers/fitController.js";
 
 const router = express.Router();
 
-router.post("/generate", verifyToken, generateFit);
+router.post("/", verifyToken, generateFit);
 
 export default router;
