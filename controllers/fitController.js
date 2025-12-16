@@ -37,18 +37,9 @@ export const generateFit = async (req, res) => {
 
     const allItems = await Item.find({ user: userId });
 
-    // Filter based on color/pattern/style
-    const filtered = allItems.filter(item => matchesFilter(item.name, options));
-
-    // Categorize by type rules
-    const buckets = {
-      tops: [],
-      bottoms: [],
-      shoes: [],
-      accessories: []
-    };
-
-    filtered.forEach(item => {
+    // 1️⃣ Categorize all items first
+    const buckets = { tops: [], bottoms: [], shoes: [], accessories: [] };
+    allItems.forEach(item => {
       for (const type in typeRules) {
         if (typeRules[type].test(item.name)) {
           buckets[type].push(item);
@@ -56,16 +47,20 @@ export const generateFit = async (req, res) => {
       }
     });
 
-    // Random selection
-    const pickRandom = arr =>
-      arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
+    // 2️⃣ Apply filter per category
+    const filteredBuckets = {};
+    for (const type in buckets) {
+      filteredBuckets[type] = buckets[type].filter(item => matchesFilter(item.name, options));
+    }
 
-    const outfit = {
-      top: pickRandom(buckets.tops),
-      bottom: pickRandom(buckets.bottoms),
-      shoes: pickRandom(buckets.shoes),
-      accessory: pickRandom(buckets.accessories)
-    };
+    // 3️⃣ Random selection with fallback
+    const pickRandom = arr => arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
+
+    const outfit = {};
+    for (const type of ["tops", "bottoms", "shoes", "accessories"]) {
+      // pick filtered if exists, else fallback to any in that category
+      outfit[type.slice(0, -1)] = pickRandom(filteredBuckets[type]) || pickRandom(buckets[type]);
+    }
 
     res.json({ outfit });
 
